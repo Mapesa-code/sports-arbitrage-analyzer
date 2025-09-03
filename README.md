@@ -9,7 +9,7 @@ An educational web application that demonstrates statistical arbitrage concepts 
 - Kelly Criterion calculations
 
 ## Live Demo
-View the app at: https://YOUR_USERNAME.github.io/sports-arbitrage-analyzer
+View the app at: https://Mapesa-code.github.io/sports-arbitrage-analyzer
 
 ## Disclaimer
 This is an educational tool only. Sports betting involves significant financial risk. Please gamble responsibly.
