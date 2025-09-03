@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Betting Statistical Arbitrage Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        'dark-bg': '#181818',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #5D5CDE 0%, #8B5FBF 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-dark-bg text-gray-900 dark:text-white transition-colors duration-300">
+    <!-- Warning Banner -->
+    <div class="bg-red-500 text-white p-3 text-center text-sm font-medium">
+        ⚠️ EDUCATIONAL TOOL ONLY - Sports betting involves significant financial risk. Please gamble responsibly. ⚠️
+    </div>
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Sports Arbitrage Analyzer</h1>
+                    <p class="text-blue-100 mt-2">Statistical analysis of betting market inefficiencies</p>
+                </div>
+                <div class="hidden md:flex space-x-4">
+                    <button onclick="showTab('arbitrage')" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all">
+                        📊 Arbitrage
+                    </button>
+                    <button onclick="showTab('sentiment')" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all">
+                        💭 Sentiment
+                    </button>
+                    <button onclick="showTab('education')" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all">
+                        📚 Learn
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-gray-100 dark:bg-gray-800 shadow-sm md:hidden">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-around py-3">
+                <button onclick="showTab('arbitrage')" class="flex-1 text-center py-2 text-sm font-medium tab-button active" data-tab="arbitrage">
+                    📊 Arbitrage
+                </button>
+                <button onclick="showTab('sentiment')" class="flex-1 text-center py-2 text-sm font-medium tab-button" data-tab="sentiment">
+                    💭 Sentiment
+                </button>
+                <button onclick="showTab('education')" class="flex-1 text-center py-2 text-sm font-medium tab-button" data-tab="education">
+                    📚 Learn
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Arbitrage Analysis Tab -->
+        <div id="arbitrage-tab" class="tab-content">
+            <!-- Controls -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-8">
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Sport</label>
+                        <select id="sport-select" class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700">
+                            <option value="nfl">NFL</option>
+                            <option value="nba">NBA</option>
+                            <option value="mlb">MLB</option>
+                            <option value="soccer">Soccer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Market Type</label>
+                        <select id="market-select" class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700">
+                            <option value="h2h">Moneyline (H2H)</option>
+                            <option value="spreads">Point Spreads</option>
+                            <option value="totals">Over/Under</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Bet Size ($)</label>
+                        <input type="number" id="bet-size" value="100" min="1" max="10000" 
+                               class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700">
+                    </div>
+                </div>
+                <button onclick="analyzeArbitrage()" class="mt-4 w-full md:w-auto px-6 py-3 bg-primary text-white rounded-lg hover:bg-purple-600 transition-colors font-medium">
+                    🔍 Find Arbitrage Opportunities
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="hidden text-center py-12">
+                <div class="pulse-animation text-6xl mb-4">📊</div>
+                <p class="text-lg text-gray-600 dark:text-gray-400">Analyzing market data...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="arbitrage-results" class="space-y-6"></div>
+
+            <!-- Summary Stats -->
+            <div id="summary-stats" class="hidden grid md:grid-cols-4 gap-4 mt-8">
+                <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="total-opportunities">0</div>
+                    <div class="text-sm text-green-700 dark:text-green-300">Opportunities Found</div>
+                </div>
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="avg-profit">$0</div>
+                    <div class="text-sm text-blue-700 dark:text-blue-300">Average Profit</div>
+                </div>
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400" id="best-profit">$0</div>
+                    <div class="text-sm text-yellow-700 dark:text-yellow-300">Best Opportunity</div>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="total-profit">$0</div>
+                    <div class="text-sm text-purple-700 dark:text-purple-300">Total Potential</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sentiment Analysis Tab -->
+        <div id="sentiment-tab" class="tab-content hidden">
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-8">
+                <h2 class="text-2xl font-bold mb-4">Team Sentiment Analysis</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Analyze social media sentiment to gauge public perception and potential betting value.
+                </p>
+                
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Team</label>
+                        <select id="team-select" class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700">
+                            <option value="lakers">Los Angeles Lakers</option>
+                            <option value="warriors">Golden State Warriors</option>
+                            <option value="celtics">Boston Celtics</option>
+                            <option value="heat">Miami Heat</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Source</label>
+                        <select id="source-select" class="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700">
+                            <option value="reddit">Reddit</option>
+                            <option value="twitter">Twitter</option>
+                            <option value="news">News</option>
+                            <option value="all">All Sources</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button onclick="analyzeSentiment()" class="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-lg hover:bg-purple-600 transition-colors font-medium">
+                    💭 Analyze Sentiment
+                </button>
+            </div>
+
+            <!-- Sentiment Results -->
+            <div id="sentiment-results" class="grid md:grid-cols-2 gap-6">
+                <!-- Sentiment Chart -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+                    <h3 class="text-lg font-semibold mb-4">Sentiment Distribution</h3>
+                    <canvas id="sentiment-chart" width="300" height="300"></canvas>
+                </div>
+
+                <!-- Recent Posts -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+                    <h3 class="text-lg font-semibold mb-4">Recent Posts Analysis</h3>
+                    <div id="recent-posts" class="space-y-3">
+                        <!-- Posts will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sentiment Impact -->
+            <div id="sentiment-impact" class="mt-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-3 text-blue-800 dark:text-blue-200">Betting Impact Analysis</h3>
+                <div id="impact-content" class="text-blue-700 dark:text-blue-300">
+                    <!-- Impact analysis will be shown here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Education Tab -->
+        <div id="education-tab" class="tab-content hidden">
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Arbitrage Explanation -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg card-hover">
+                    <h3 class="text-xl font-semibold mb-4 text-primary">What is Sports Arbitrage?</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        Sports arbitrage (or "sure betting") occurs when different bookmakers offer odds that allow you to bet on all possible outcomes of an event and guarantee a profit regardless of the result.
+                    </p>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                        <h4 class="font-medium mb-2">Example:</h4>
+                        <ul class="text-sm space-y-1">
+                            <li>• Bookmaker A: Team X @ 2.10</li>
+                            <li>• Bookmaker B: Team Y @ 2.05</li>
+                            <li>• Total implied probability: 95.2%</li>
+                            <li>• <span class="text-green-600 font-medium">Profit margin: 4.8%</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="border-l-4 border-yellow-500 pl-4 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-r">
+                        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                            <strong>Important:</strong> True arbitrage opportunities are rare and require significant capital and speed to execute profitably.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Kelly Criterion -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg card-hover">
+                    <h3 class="text-xl font-semibold mb-4 text-primary">Kelly Criterion</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        The Kelly Criterion helps determine the optimal bet size based on your edge and the odds offered.
+                    </p>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                        <h4 class="font-medium mb-2">Formula:</h4>
+                        <code class="text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">
+                            f = (bp - q) / b
+                        </code>
+                        <ul class="text-sm mt-2 space-y-1">
+                            <li>• f = fraction of bankroll to bet</li>
+                            <li>• b = decimal odds - 1</li>
+                            <li>• p = probability of winning</li>
+                            <li>• q = probability of losing (1-p)</li>
+                        </ul>
+                    </div>
+
+                    <div class="border-l-4 border-blue-500 pl-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-r">
+                        <p class="text-sm text-blue-800 dark:text-blue-200">
+                            <strong>Tip:</strong> Many professionals bet 50% of the Kelly recommendation to reduce volatility.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Market Efficiency -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg card-hover">
+                    <h3 class="text-xl font-semibold mb-4 text-primary">Market Efficiency</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">
+                        Sports betting markets are generally efficient, meaning odds accurately reflect true probabilities. However, inefficiencies can occur due to:
+                    </p>
+                    
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">•</span>
+                            <span>Public bias towards popular teams</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">•</span>
+                            <span>Late-breaking news or injury reports</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">•</span>
+                            <span>Differences in bookmaker margins</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">•</span>
+                            <span>Low-volume markets with less sharp money</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Risk Warning -->
+                <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-6 shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">⚠️ Risk Warnings</h3>
+                    <ul class="space-y-2 text-sm text-red-700 dark:text-red-300">
+                        <li class="flex items-start">
+                            <span class="text-red-500 mr-2">•</span>
+                            <span><strong>Account limits:</strong> Bookmakers may limit or ban profitable players</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-red-500 mr-2">•</span>
+                            <span><strong>Execution risk:</strong> Odds change rapidly, opportunities may disappear</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-red-500 mr-2">•</span>
+                            <span><strong>Capital requirements:</strong> Need significant funds for meaningful profits</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-red-500 mr-2">•</span>
+                            <span><strong>Addiction risk:</strong> Gambling can become compulsive</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-4 p-3 bg-red-100 dark:bg-red-800/30 rounded">
+                        <p class="text-sm font-medium text-red-800 dark:text-red-200">
+                            Only bet money you can afford to lose. Seek help if gambling becomes a problem.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-100 dark:bg-gray-800 mt-12 py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-gray-600 dark:text-gray-400 mb-2">
+                Educational tool for understanding sports betting mathematics
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-500">
+                Not financial advice. Gamble responsibly. Must be 21+ where legal.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Dark mode handling
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Tab functionality
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active', 'text-primary', 'border-b-2', 'border-primary');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            
+            // Add active class to selected button
+            const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active', 'text-primary', 'border-b-2', 'border-primary');
+            }
+        }
+
+        // Sample data for demonstration
+        const sampleGames = [
+            {
+                id: 1,
+                sport: 'NBA',
+                homeTeam: 'Los Angeles Lakers',
+                awayTeam: 'Boston Celtics',
+                commence_time: '2024-01-15T20:00:00Z',
+                bookmakers: [
+                    {
+                        title: 'FanDuel',
+                        odds: { home: 2.10, away: 1.85 }
+                    },
+                    {
+                        title: 'DraftKings',
+                        odds: { home: 1.95, away: 1.95 }
+                    },
+                    {
+                        title: 'BetMGM',
+                        odds: { home: 2.05, away: 1.90 }
+                    }
+                ]
+            },
+            {
+                id: 2,
+                sport: 'NFL',
+                homeTeam: 'Kansas City Chiefs',
+                awayTeam: 'Buffalo Bills',
+                commence_time: '2024-01-16T18:00:00Z',
+                bookmakers: [
+                    {
+                        title: 'Caesars',
+                        odds: { home: 1.90, away: 2.00 }
+                    },
+                    {
+                        title: 'FanDuel',
+                        odds: { home: 1.95, away: 1.95 }
+                    },
+                    {
+                        title: 'PointsBet',
+                        odds: { home: 1.85, away: 2.05 }
+                    }
+                ]
+            }
+        ];
+
+        function analyzeArbitrage() {
+            const loadingState = document.getElementById('loading-state');
+            const resultsContainer = document.getElementById('arbitrage-results');
+            const summaryStats = document.getElementById('summary-stats');
+            
+            // Show loading
+            loadingState.classList.remove('hidden');
+            resultsContainer.innerHTML = '';
+            summaryStats.classList.add('hidden');
+            
+            // Simulate API delay
+            setTimeout(() => {
+                loadingState.classList.add('hidden');
+                
+                const betSize = parseFloat(document.getElementById('bet-size').value) || 100;
+                const opportunities = findArbitrageOpportunities(sampleGames, betSize);
+                
+                displayArbitrageResults(opportunities);
+                updateSummaryStats(opportunities);
+                
+                summaryStats.classList.remove('hidden');
+            }, 2000);
+        }
+
+        function findArbitrageOpportunities(games, betSize) {
+            const opportunities = [];
+            
+            games.forEach(game => {
+                // Find best odds for each outcome
+                let bestHomeOdds = 0;
+                let bestAwayOdds = 0;
+                let bestHomeBookmaker = '';
+                let bestAwayBookmaker = '';
+                
+                game.bookmakers.forEach(bookmaker => {
+                    if (bookmaker.odds.home > bestHomeOdds) {
+                        bestHomeOdds = bookmaker.odds.home;
+                        bestHomeBookmaker = bookmaker.title;
+                    }
+                    if (bookmaker.odds.away > bestAwayOdds) {
+                        bestAwayOdds = bookmaker.odds.away;
+                        bestAwayBookmaker = bookmaker.title;
+                    }
+                });
+                
+                // Calculate arbitrage percentage
+                const impliedProbability = (1 / bestHomeOdds) + (1 / bestAwayOdds);
+                
+                if (impliedProbability < 1) {
+                    // Arbitrage opportunity found
+                    const profit = (betSize / impliedProbability) - betSize;
+                    const homeBet = (betSize / impliedProbability) * (1 / bestHomeOdds);
+                    const awayBet = (betSize / impliedProbability) * (1 / bestAwayOdds);
+                    
+                    opportunities.push({
+                        game: game,
+                        profit: profit,
+                        profitPercentage: (profit / betSize) * 100,
+                        totalStake: betSize,
+                        bets: [
+                            {
+                                team: game.homeTeam,
+                                bookmaker: bestHomeBookmaker,
+                                odds: bestHomeOdds,
+                                stake: homeBet
+                            },
+                            {
+                                team: game.awayTeam,
+                                bookmaker: bestAwayBookmaker,
+                                odds: bestAwayOdds,
+                                stake: awayBet
+                            }
+                        ]
+                    });
+                }
+            });
+            
+            return opportunities.sort((a, b) => b.profit - a.profit);
+        }
+
+        function displayArbitrageResults(opportunities) {
+            const container = document.getElementById('arbitrage-results');
+            
+            if (opportunities.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">🔍</div>
+                        <h3 class="text-xl font-semibold mb-2">No Arbitrage Opportunities Found</h3>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            Markets are currently efficient. Try again later or adjust your sport/market selection.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+            
+            opportunities.forEach((opp, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg card-hover';
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold">${opp.game.awayTeam} @ ${opp.game.homeTeam}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">${opp.game.sport} • ${new Date(opp.game.commence_time).toLocaleDateString()}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-green-600 dark:text-green-400">+$${opp.profit.toFixed(2)}</div>
+                            <div class="text-sm text-green-700 dark:text-green-300">${opp.profitPercentage.toFixed(2)}% profit</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        ${opp.bets.map(bet => `
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-medium">${bet.team}</span>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">${bet.bookmaker}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lg font-semibold">${bet.odds.toFixed(2)}</span>
+                                    <span class="text-lg font-bold text-primary">$${bet.stake.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+                        <span>Total Stake: $${opp.totalStake.toFixed(2)}</span>
+                        <span>Guaranteed Profit: $${opp.profit.toFixed(2)}</span>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function updateSummaryStats(opportunities) {
+            document.getElementById('total-opportunities').textContent = opportunities.length;
+            
+            if (opportunities.length > 0) {
+                const avgProfit = opportunities.reduce((sum, opp) => sum + opp.profit, 0) / opportunities.length;
+                const bestProfit = Math.max(...opportunities.map(opp => opp.profit));
+                const totalProfit = opportunities.reduce((sum, opp) => sum + opp.profit, 0);
+                
+                document.getElementById('avg-profit').textContent = `$${avgProfit.toFixed(2)}`;
+                document.getElementById('best-profit').textContent = `$${bestProfit.toFixed(2)}`;
+                document.getElementById('total-profit').textContent = `$${totalProfit.toFixed(2)}`;
+            } else {
+                document.getElementById('avg-profit').textContent = '$0';
+                document.getElementById('best-profit').textContent = '$0';
+                document.getElementById('total-profit').textContent = '$0';
+            }
+        }
+
+        // Sentiment Analysis Functions
+        let sentimentChart = null;
+
+        function analyzeSentiment() {
+            const team = document.getElementById('team-select').value;
+            const source = document.getElementById('source-select').value;
+            
+            // Simulate sentiment analysis with sample data
+            const sentimentData = generateSampleSentiment(team);
+            displaySentimentResults(sentimentData, team);
+        }
+
+        function generateSampleSentiment(team) {
+            // Generate realistic sentiment data based on team
+            const teamSentiments = {
+                lakers: { positive: 45, negative: 25, neutral: 30 },
+                warriors: { positive: 55, negative: 20, neutral: 25 },
+                celtics: { positive: 50, negative: 30, neutral: 20 },
+                heat: { positive: 40, negative: 35, neutral: 25 }
+            };
+            
+            const baseData = teamSentiments[team] || { positive: 40, negative: 30, neutral: 30 };
+            
+            // Add some randomness
+            const variance = 10;
+            return {
+                positive: Math.max(0, baseData.positive + (Math.random() - 0.5) * variance),
+                negative: Math.max(0, baseData.negative + (Math.random() - 0.5) * variance),
+                neutral: Math.max(0, baseData.neutral + (Math.random() - 0.5) * variance),
+                posts: generateSamplePosts(team)
+            };
+        }
+
+        function generateSamplePosts(team) {
+            const posts = [
+                { text: `${team} looking strong this season!`, sentiment: 'positive', score: 0.7 },
+                { text: `Not sure about ${team}'s recent performance...`, sentiment: 'negative', score: -0.3 },
+                { text: `${team} vs Warriors should be interesting`, sentiment: 'neutral', score: 0.1 },
+                { text: `Love watching ${team} play!`, sentiment: 'positive', score: 0.8 },
+                { text: `${team} needs to improve their defense`, sentiment: 'negative', score: -0.4 }
+            ];
+            
+            return posts.map(post => ({
+                ...post,
+                text: post.text.replace(team, getTeamDisplayName(team))
+            }));
+        }
+
+        function getTeamDisplayName(team) {
+            const names = {
+                lakers: 'Lakers',
+                warriors: 'Warriors', 
+                celtics: 'Celtics',
+                heat: 'Heat'
+            };
+            return names[team] || team;
+        }
+
+        function displaySentimentResults(data, team) {
+            // Update chart
+            updateSentimentChart(data);
+            
+            // Update posts
+            updateRecentPosts(data.posts);
+            
+            // Update impact analysis
+            updateImpactAnalysis(data, team);
+        }
+
+        function updateSentimentChart(data) {
+            const ctx = document.getElementById('sentiment-chart').getContext('2d');
+            
+            if (sentimentChart) {
+                sentimentChart.destroy();
+            }
+            
+            sentimentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Positive', 'Negative', 'Neutral'],
+                    datasets: [{
+                        data: [data.positive, data.negative, data.neutral],
+                        backgroundColor: [
+                            '#10B981', // Green
+                            '#EF4444', // Red  
+                            '#6B7280'  // Gray
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#000000'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRecentPosts(posts) {
+            const container = document.getElementById('recent-posts');
+            
+            container.innerHTML = posts.map(post => `
+                <div class="border-l-4 ${getSentimentBorderColor(post.sentiment)} pl-3 py-2">
+                    <p class="text-sm">${post.text}</p>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">${post.sentiment}</span>
+                        <span class="text-xs font-medium ${getSentimentTextColor(post.sentiment)}">
+                            ${post.score > 0 ? '+' : ''}${post.score.toFixed(1)}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getSentimentBorderColor(sentiment) {
+            return {
+                positive: 'border-green-500',
+                negative: 'border-red-500',
+                neutral: 'border-gray-500'
+            }[sentiment] || 'border-gray-500';
+        }
+
+        function getSentimentTextColor(sentiment) {
+            return {
+                positive: 'text-green-600 dark:text-green-400',
+                negative: 'text-red-600 dark:text-red-400', 
+                neutral: 'text-gray-600 dark:text-gray-400'
+            }[sentiment] || 'text-gray-600 dark:text-gray-400';
+        }
+
+        function updateImpactAnalysis(data, team) {
+            const container = document.getElementById('impact-content');
+            const teamDisplay = getTeamDisplayName(team);
+            
+            let analysis = '';
+            const sentimentRatio = data.positive / (data.negative || 1);
+            
+            if (sentimentRatio > 1.5) {
+                analysis = `
+                    <p class="mb-2"><strong>High Positive Sentiment</strong> for ${teamDisplay}</p>
+                    <p>• Public likely to overbet this team (potential fade value)</p>
+                    <p>• Lines may be inflated due to public bias</p>
+                    <p>• Consider betting against in high-profile games</p>
+                `;
+            } else if (sentimentRatio < 0.7) {
+                analysis = `
+                    <p class="mb-2"><strong>High Negative Sentiment</strong> for ${teamDisplay}</p>
+                    <p>• Public likely to underbet this team (potential value)</p>
+                    <p>• Lines may be deflated due to negative bias</p>
+                    <p>• Consider backing in bounce-back scenarios</p>
+                `;
+            } else {
+                analysis = `
+                    <p class="mb-2"><strong>Balanced Sentiment</strong> for ${teamDisplay}</p>
+                    <p>• No clear public bias detected</p>
+                    <p>• Lines likely reflect true probability</p>
+                    <p>• Look for other edges (injuries, matchups, etc.)</p>
+                `;
+            }
+            
+            container.innerHTML = analysis;
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show arbitrage tab by default
+            showTab('arbitrage');
+            
+            // Generate initial sample data
+            analyzeArbitrage();
+            analyzeSentiment();
+        });
+    </script>
+</body>
+</html>
